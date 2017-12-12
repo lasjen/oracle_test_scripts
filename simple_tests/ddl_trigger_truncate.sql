@@ -1,11 +1,11 @@
-drop table tst purge;
-drop table tst2 purge;
+DROP TABLE tst PURGE;
+DROP TABLE tst2 PURGE;
 
-create table tst(id number, tekst varchar2(10));
-create table tst2(id number, tekst varchar2(10));
-insert into tst values (1,'DUMMY');
-insert into tst2 values (1,'DUMMY');
-commit;
+CREATE TABLE tst(id NUMBER, tekst VARCHAR2(10));
+CREATE TABLE tst2(id NUMBER, tekst VARCHAR2(10));
+INSERT INTO tst VALUES (1,'DUMMY');
+INSERT INTO tst2 VALUES (1,'DUMMY');
+COMMIT;
 
 
 CREATE OR REPLACE TRIGGER prevent_truncates BEFORE TRUNCATE ON SCHEMA
@@ -16,8 +16,8 @@ BEGIN
 END;
 /
 
-truncate table tst2;
-truncate table tst;
+TRUNCATE TABLE tst2;
+TRUNCATE TABLE tst;
 
-select * from tst2;
-select * from tst;
+SELECT * FROM tst2;
+SELECT * FROM tst;
