@@ -1,3 +1,8 @@
+/*
+create table tst (id number, txt varchar2(10))
+/
+*/
+
 import java.sql.*;
 import oracle.jdbc.OracleConnection;
 import oracle.sql.ArrayDescriptor;
