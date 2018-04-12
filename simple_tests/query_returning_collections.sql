@@ -1,4 +1,6 @@
+DROP TABLE EMP;
 DROP TABLE DEPT;
+
 CREATE TABLE DEPT
        (DEPTNO NUMBER(2) CONSTRAINT PK_DEPT PRIMARY KEY,
 	DNAME VARCHAR2(14) ,
@@ -78,5 +80,6 @@ CREATE OR REPLACE TYPE emp_at AS TABLE OF emp_t
 
 select emp_t(empno, ename, job, mgr, hiredate, sal, comm, deptno) as emp_at 
 from emp;
+
 select d.*, (select cast(collect(emp_t(empno, ename, job, mgr, hiredate, sal, comm, deptno)) as emp_at) from emp e where e.deptno=d.deptno) emps
 from dept d;
