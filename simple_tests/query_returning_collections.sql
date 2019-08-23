@@ -54,11 +54,13 @@ CREATE TABLE SALGRADE
       ( GRADE NUMBER,
 	LOSAL NUMBER,
 	HISAL NUMBER );
-INSERT INTO SALGRADE VALUES (1,700,1200);
-INSERT INTO SALGRADE VALUES (2,1201,1400);
-INSERT INTO SALGRADE VALUES (3,1401,2000);
-INSERT INTO SALGRADE VALUES (4,2001,3000);
-INSERT INTO SALGRADE VALUES (5,3001,9999);
+INSERT ALL 
+  INTO SALGRADE VALUES (1,700,1200)
+  INTO SALGRADE VALUES (2,1201,1400)
+  INTO SALGRADE VALUES (3,1401,2000)
+  INTO SALGRADE VALUES (4,2001,3000)
+  INTO SALGRADE VALUES (5,3001,9999)
+SELECT * FROM DUAL;
 COMMIT;
 
 -- Create Collection Types
@@ -78,8 +80,117 @@ CREATE OR REPLACE TYPE emp_t AS OBJECT (
 CREATE OR REPLACE TYPE emp_at AS TABLE OF emp_t
 /
 
+CREATE OR REPLACE PROCEDURE list_employees(deptno_i IN NUMBER, dname_o OUT varchar2, emp_list_o OUT emp_at) AS
+BEGIN
+  select d.DNAME , (SELECT cast(collect(emp_t(e.empno, e.ename, e.job, e.mgr, e.hiredate, e.sal, e.comm, e.deptno)) as emp_at)
+                    FROM emp e
+                    WHERE e.deptno=d.deptno) INTO dname_o, emp_list_o
+  from dept d 
+  where d.deptno=deptno_i;
+END list_employees;
+/
+
+CREATE OR REPLACE PROCEDURE list_employees_json(deptno_i IN NUMBER, emp_details_o OUT varchar2) AS
+BEGIN
+       with manager as
+    ( select '{ '
+           ||' "name":"'||ename||'"'
+           ||',"salary":'||sal
+           ||',"hiredate":"'||to_char(hiredate, 'DD-MM-YYYY')||'"'
+           ||'} ' json
+      , emp.*
+      from   emp 
+    )
+    , employee as
+    ( select '{ '
+           ||' "empno":"'||empno||'"'
+           ||' "name":"'||ename||'"'
+           ||',"job":"'||job||'"'
+           ||',"salary":'||sal
+           ||',"manager":'||case when mgr is null then '""' else (select json from manager mgr where mgr.empno = emp.mgr) end       ||',"hiredate":"'||to_char(hiredate, 'DD-MM-YYYY')||'"'
+           ||'} ' json
+      , emp.*
+      from   emp
+    )
+    , department as
+    ( select '{ '
+           ||' "name":"'||dname||'"'
+           ||',"deptno":"'||deptno||'"'
+           ||',"location":"'||loc||'"'
+           ||',"employees":'||(  select '['||listagg( json, ',')
+                                                      within group (order by 1)
+                                      ||']' as data
+                                 from employee emp
+                                 where emp.deptno = dept.deptno
+                              )
+           ||'} ' json
+      from   dept
+      where deptno=deptno_i
+    )
+    select '{"company" : ['
+           ||( select listagg( json, ',')
+                      within group (order by 1)
+               from   department
+              )
+           ||']}' into emp_details_o
+    from   dual;
+
+END list_employees_json;
+/
+
 select emp_t(empno, ename, job, mgr, hiredate, sal, comm, deptno) as emp_at 
 from emp;
 
-select d.*, (select cast(collect(emp_t(empno, ename, job, mgr, hiredate, sal, comm, deptno)) as emp_at) from emp e where e.deptno=d.deptno) emps
+select d.DNAME , (SELECT cast(collect(emp_t(e.empno, e.ename, e.job, e.mgr, e.hiredate, e.sal, e.comm, e.deptno)) as emp_at)
+                  FROM emp e
+                  WHERE e.deptno=d.deptno) emp_list
+  from dept d 
+  where d.deptno=10;
+
+select cast(collect(emp_t(empno, ename, job, mgr, hiredate, sal, comm, deptno)) as emp_at) as emp_list 
+from emp;
+
+select d.*, (select cast(collect(emp_t(empno, ename, job, mgr, hiredate, sal, comm, deptno)) as emp_at)  from emp e where e.deptno=d.deptno) emps
 from dept d;
+
+   with manager as
+    ( select '{ '
+           ||' "name":"'||ename||'"'
+           ||',"salary":'||sal
+           ||',"hiredate":"'||to_char(hiredate, 'DD-MM-YYYY')||'"'
+           ||'} ' json
+      , emp.*
+      from   emp 
+    )
+    , employee as
+    ( select '{ '
+           ||' "name":"'||ename||'"'
+           ||',"job":"'||job||'"'
+           ||',"salary":'||sal
+           ||',"manager":'||case when mgr is null then '""' else (select json from manager mgr where mgr.empno = emp.mgr) end       ||',"hiredate":"'||to_char(hiredate, 'DD-MM-YYYY')||'"'
+           ||'} ' json
+      , emp.*
+      from   emp
+    )
+    , department as
+    ( select '{ '
+           ||' "name":"'||dname||'"'
+           ||',"identifier":"'||deptno||'"'
+           ||',"location":"'||loc||'"'
+           ||',"employees":'||(  select '['||listagg( json, ',')
+                                                      within group (order by 1)
+                                      ||']' as data
+                                 from employee emp
+                                 where emp.deptno = dept.deptno
+                              )
+           ||'} ' json
+      from   dept
+      where deptno=10
+    )
+    select '{"company" : ['
+           ||( select listagg( json, ',')
+                      within group (order by 1)
+               from   department
+              )
+           ||']}'
+    from   dual;
